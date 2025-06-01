@@ -1,0 +1,21 @@
+{
+    "summary": "This is a sample summary of your study content. It covers key concepts to help you stay focused and motivated during your study session.",
+    "audio_url": "https://drive.google.com/file/d/1eJKxRqJMmOSr3g90ncKL1Daewfs05MnF/view?usp=sharing",
+    "mindmap": {
+      "main_topic": "Study Tips",
+      "branches": [
+        {
+          "topic": "Focus Techniques",
+          "subtopics": ["Pomodoro Method", "Minimize Distractions", "Set Goals"]
+        },
+        {
+          "topic": "Motivation",
+          "subtopics": ["Reward System", "Pomodoro Method", "Minimize Distractions sdjhsdj"]
+        },
+        {
+            "topic": "Another Motivation",
+            "subtopics": ["Reward System", "Build Habit"]
+        }
+      ]
+    }
+  }
