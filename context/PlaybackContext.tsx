@@ -34,6 +34,7 @@ interface PlaybackContextType {
   setPosition: (position: number) => void;
   apiResponse: ApiResponse | null;
   setApiResponse: (response: ApiResponse | null) => void;
+  updateTrackAndResponse: (newTrack: Track | null, newResponse: ApiResponse | null) => void;
 }
 
 const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined);
@@ -47,7 +48,19 @@ export const PlaybackProvider = ({ children }: { children: ReactNode }) => {
 
   const togglePlayback = () => {
     setIsPlaying(!isPlaying);
-    // Add actual playback logic here (e.g., audio player control)
+  };
+
+  const updatePosition = (newPosition: number) => {
+    setPosition(Math.floor(newPosition));
+  };
+
+  const updateDuration = (newDuration: number) => {
+    setDuration(Math.floor(newDuration));
+  };
+
+  const updateTrackAndResponse = (newTrack: Track | null, newResponse: ApiResponse | null) => {
+    setTrack(newTrack);
+    setApiResponse(newResponse);
   };
 
   return (
@@ -59,9 +72,10 @@ export const PlaybackProvider = ({ children }: { children: ReactNode }) => {
         togglePlayback,
         position,
         duration,
-        setPosition,
+        setPosition: updatePosition,
         apiResponse,
         setApiResponse,
+        updateTrackAndResponse,
       }}
     >
       {children}

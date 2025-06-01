@@ -33,7 +33,7 @@ export default function Home() {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedLength, setSelectedLength] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { setTrack, track } = usePlayback();
+  const { setTrack, track, updateTrackAndResponse } = usePlayback();
   const [auraData, setAuraData] = useState<{
     auraScore: number;
     streakCount: number;
@@ -166,28 +166,35 @@ export default function Home() {
 
       const data = await response.json();
 
-      // Set track with the API response data
-      setTrack({
+      // Create track object
+      const newTrack = {
         title: `${selectedMood} Podcast`,
         artist: selectedHosts.join(' & '),
         audioUrl: data.audio_url,
         thumbnail: require('../../assets/thumbnail.png'),
-      });
+      };
+
+      // Update both track and API response using the new function
+      updateTrackAndResponse(newTrack, data);
 
       // Navigate to player screen
       router.push('/player');
     } catch (error) {
       console.log('Error generating podcast:', error);
       const data = SAMPLE_RESPONSE;
-      setTrack({
+      
+      // Create track object for sample data
+      const newTrack = {
         title: `${selectedMood} Podcast`,
         artist: selectedHosts.join(' & '),
         audioUrl: data.audio_url,
         thumbnail: require('../../assets/thumbnail.png'),
-      });
-      router.push('/player');
-      // Alert.alert('Error', 'Failed to generate podcast. Please try again.');
+      };
+
+      // Update both track and API response using the new function
+      updateTrackAndResponse(newTrack, data);
       
+      router.push('/player');
     } finally {
       setLoading(false);
     }

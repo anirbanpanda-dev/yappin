@@ -1,5 +1,4 @@
 // app/player.tsx
-// Version 1
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -18,9 +17,8 @@ import { Slider } from '@rneui/themed';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
+import { Audio } from 'expo-av';
 import Svg, { Rect, Line, Text as SvgText } from 'react-native-svg';
-import { usePlayback } from '../context/PlaybackContext';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -68,14 +66,15 @@ interface UserInputs {
   url?: string;
 }
 
-const SAMPLE_RESPONSE = require('./data/sampleResponse.json');
+// Simulated API response (replace with actual API call if needed)
+const SAMPLE_RESPONSE: ApiResponse = require('./data/sampleResponse.json');
 
 // Simulated aura and vibe utilities
 const getMotivationalQuote = (auraScore: number, host: string): string => {
-  if (auraScore <= 20) return `${host} says: "Hey, let’s recharge your vibe! 🔋"`;
-  if (auraScore <= 50) return `${host} says: "You’re starting to glow—keep it up! ✨"`;
-  if (auraScore <= 80) return `${host} says: "Today’s vibe is brain fuel 💡"`;
-  return `${host} says: "You’re absolutely slaying it! 🔥"`;
+  if (auraScore <= 20) return `${host} says: "Hey, let's recharge your vibe! 🔋"`;
+  if (auraScore <= 50) return `${host} says: "You're starting to glow—keep it up! ✨"`;
+  if (auraScore <= 80) return `${host} says: "Today's vibe is brain fuel 💡"`;
+  return `${host} says: "You're absolutely slaying it! 🔥"`;
 };
 
 const saveEpisodeReaction = async (episode: EpisodeHistory) => {
@@ -95,7 +94,7 @@ const wrapText = (text: string, maxWidth: number, fontSize: number): string[] =>
   const lines: string[] = [];
   let currentLine = '';
 
-  const charWidth = fontSize * 0.6; // Approximate character width based on font size
+  const charWidth = fontSize * 0.6;
   const maxCharsPerLine = Math.floor(maxWidth / charWidth);
 
   for (const word of words) {
@@ -118,7 +117,7 @@ const wrapText = (text: string, maxWidth: number, fontSize: number): string[] =>
 
 // Mindmap Component
 const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
-  const svgWidth = 600; // Increased width for more horizontal space
+  const svgWidth = 600;
   const mainWidth = 100;
   const mainHeight = 50;
   const branchWidth = 80;
@@ -126,31 +125,25 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
   const subtopicWidth = 60;
   const subtopicHeight = 30;
   const cornerRadius = 8;
-  const verticalSpacing = 60; // Space between vertically stacked subtopics
+  const verticalSpacing = 60;
 
-  const mainX = svgWidth / 2; // Center the main topic
-  const mainY = 50; // Position at the top
+  const mainX = svgWidth / 2;
+  const mainY = 50;
 
   const branches = mindmap.branches;
   const branchCount = branches.length;
-  const branchSpacing = svgWidth / (branchCount + 1); // Space branches evenly
-  const branchY = mainY + 120; // Position branches below the main topic
+  const branchSpacing = svgWidth / (branchCount + 1);
+  const branchY = mainY + 120;
 
-  // Calculate the maximum number of subtopics for dynamic SVG height
   const maxSubtopics = Math.max(...branches.map(branch => branch.subtopics.length), 1);
-  const svgHeight = 500 + (maxSubtopics - 1) * verticalSpacing; // Dynamic height based on subtopics
+  const svgHeight = 500 + (maxSubtopics - 1) * verticalSpacing;
 
-  // Zoom and Pan functionality with boundary constraints
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
-
-  // Container dimensions (approximated from mindmapContainer style)
-  const containerWidth = svgWidth; // Match SVG width
-  const containerHeight = 400; // Approximate height based on typical mindmapContainer rendering
 
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
@@ -170,7 +163,8 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
 
   const panGesture = Gesture.Pan()
     .onUpdate((event) => {
-      
+      translateX.value = savedTranslateX.value + event.translationX;
+      translateY.value = savedTranslateY.value + event.translationY;
     })
     .onEnd(() => {
       savedTranslateX.value = translateX.value;
@@ -192,7 +186,6 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
       <GestureDetector gesture={gestures}>
         <Animated.View style={[styles.mindmapContainerInner, animatedStyle]}>
           <Svg height={svgHeight} width={svgWidth} style={styles.mindmapSvg}>
-            {/* Main Topic (Root Node) */}
             <Rect
               x={mainX - mainWidth / 2}
               y={mainY - mainHeight / 2}
@@ -217,15 +210,11 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
                 {line}
               </SvgText>
             ))}
-
-            {/* Branches */}
             {branches.map((branch, index) => {
               const branchX = (index + 1) * branchSpacing;
               const subtopics = branch.subtopics;
-
               return (
                 <React.Fragment key={index}>
-                  {/* Line from Main Topic to Branch */}
                   <Line
                     x1={mainX}
                     y1={mainY + mainHeight / 2}
@@ -235,7 +224,6 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
                     strokeWidth="2"
                     opacity={0.7}
                   />
-                  {/* Branch Topic Rectangle */}
                   <Rect
                     x={branchX - branchWidth / 2}
                     y={branchY - branchHeight / 2}
@@ -260,14 +248,11 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
                       {line}
                     </SvgText>
                   ))}
-
-                  {/* Subtopics (Arranged Vertically) */}
                   {subtopics.map((subtopic, subIndex) => {
-                    const subtopicX = branchX; // Center subtopics under the branch
-                    const subtopicY = branchY + 90 + subIndex * verticalSpacing; // Stack vertically
+                    const subtopicX = branchX;
+                    const subtopicY = branchY + 90 + subIndex * verticalSpacing;
                     return (
                       <React.Fragment key={subIndex}>
-                        {/* Line from Branch to Subtopic */}
                         <Line
                           x1={branchX}
                           y1={branchY + branchHeight / 2}
@@ -277,7 +262,6 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
                           strokeWidth="1"
                           opacity={0.5}
                         />
-                        {/* Subtopic Rectangle */}
                         <Rect
                           x={subtopicX - subtopicWidth / 2}
                           y={subtopicY - subtopicHeight / 2}
@@ -317,16 +301,178 @@ const MindmapComponent: React.FC<{ mindmap: Mindmap }> = ({ mindmap }) => {
 
 // Main Component: Player
 export default function Player() {
-  const { track, setTrack, isPlaying, togglePlayback, position, duration, setPosition } = usePlayback();
+  const [track, setTrack] = useState<Track | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [auraScore, setAuraScore] = useState(0);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
-  const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const [hasFetchedData, setHasFetchedData] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAudioReady, setIsAudioReady] = useState(false);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [currentPosition, setCurrentPosition] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [apiResponse, setApiResponse] = useState<ApiResponse | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const params = useLocalSearchParams<UserInputs>();
   const shareRef = useRef<View>(null);
+  const audioRef = useRef<Audio.Sound | null>(null);
+
+  // Initialize track and API response
+  useEffect(() => {
+    if (hasFetchedData) return;
+
+    // Simulate fetching track and API response (replace with actual API call if needed)
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        // For now, use SAMPLE_RESPONSE; replace with actual API call
+        const response: ApiResponse = SAMPLE_RESPONSE;
+        setApiResponse(response);
+        setTrack({
+          title: 'Sample Episode', // Replace with dynamic title
+          artist: 'VibeCast Host', // Replace with dynamic artist
+          audioUrl: response.audio_url,
+          thumbnail: require('../assets/avatar-base.png'), // Replace with dynamic thumbnail
+        });
+        setHasFetchedData(true);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        Alert.alert('Error', 'Failed to load episode data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [hasFetchedData]);
+
+  // Initialize audio
+  useEffect(() => {
+    if (track?.audioUrl) {
+      const loadAudio = async () => {
+        try {
+          setIsLoading(true);
+          setIsBuffering(true);
+
+          // Configure audio mode
+          await Audio.setAudioModeAsync({
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: false,
+          });
+
+          // Create new sound instance
+          const sound = new Audio.Sound();
+          await sound.loadAsync(
+            { uri: track.audioUrl },
+            {
+              shouldPlay: false,
+              volume: 1.0,
+              rate: 1.0,
+              shouldCorrectPitch: true,
+            }
+          );
+
+          audioRef.current = sound;
+          const status = await sound.getStatusAsync();
+
+          if (status.isLoaded && status.durationMillis) {
+            setAudioDuration(Math.floor(status.durationMillis));
+            setIsAudioReady(true);
+          }
+        } catch (error) {
+          console.error('Error loading audio:', error);
+          Alert.alert('Error', 'Failed to load audio. Please try again.');
+        } finally {
+          setIsLoading(false);
+          setIsBuffering(false);
+        }
+      };
+      loadAudio();
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.unloadAsync();
+        audioRef.current = null;
+      }
+    };
+  }, [track]);
+
+  // Periodic position update
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isPlaying && audioRef.current && isAudioReady) {
+      interval = setInterval(async () => {
+        try {
+          const status = await audioRef.current!.getStatusAsync();
+          if (status.isLoaded && status.positionMillis !== undefined) {
+            const position = Math.floor(status.positionMillis);
+            setCurrentPosition(position);
+            setIsBuffering(!!status.isBuffering);
+            if (status.didJustFinish || position >= audioDuration) {
+              setCurrentPosition(0);
+              setIsPlaying(false);
+              setShowMoodSelector(true);
+              await audioRef.current!.setPositionAsync(0);
+            }
+          }
+        } catch (error) {
+          console.error('Error updating position:', error);
+        }
+      }, 1000); // Update every second
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isPlaying, isAudioReady, audioDuration]);
+
+  // Handle play/pause
+  const handlePlayPause = async () => {
+    if (!audioRef.current || !isAudioReady) return;
+
+    try {
+      if (isPlaying) {
+        await audioRef.current.pauseAsync();
+        setIsPlaying(false);
+      } else {
+        await audioRef.current.playAsync();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Error toggling playback:', error);
+      Alert.alert('Error', 'Failed to play/pause audio. Please try again.');
+    }
+  };
+
+  // Handle seeking
+  const handleSliderChange = async (value: number) => {
+    if (!audioRef.current || !isAudioReady) return;
+    const newPosition = Math.floor(value * 1000);
+    try {
+      await audioRef.current.setPositionAsync(newPosition);
+      setCurrentPosition(newPosition);
+    } catch (error) {
+      console.error('Error seeking:', error);
+      Alert.alert('Error', 'Failed to seek. Please try again.');
+    }
+  };
+
+  // Handle 10-second skip
+  const handleSkip = async (seconds: number) => {
+    if (!audioRef.current || !isAudioReady) return;
+    try {
+      const newPosition = Math.floor(
+        Math.max(0, Math.min(currentPosition + seconds * 1000, audioDuration))
+      );
+      await audioRef.current.setPositionAsync(newPosition);
+      setCurrentPosition(newPosition);
+    } catch (error) {
+      console.error('Error skipping:', error);
+      Alert.alert('Error', 'Failed to skip. Please try again.');
+    }
+  };
 
   // Fetch aura score on mount
   useEffect(() => {
@@ -346,61 +492,6 @@ export default function Player() {
     };
     fetchAuraScore();
   }, []);
-
-  // Call API to summarize and generate podcast
-  useEffect(() => {
-    if (hasFetchedData || !setTrack) return;
-
-    const fetchPodcastData = async () => {
-      setLoading(true);
-      try {
-        const payload: UserInputs = {
-          text: params.text || 'Sample study content for podcast generation.',
-          mood: params.mood || 'gen_z_podcast',
-        };
-
-        const response = await axios.post('https://BACKEND_ENDPOINT/generate', payload);
-        const data: ApiResponse = response.data;
-
-        setApiResponse(data);
-        setHasFetchedData(true);
-
-        setTrack({
-          title: 'Generated Study Podcast',
-          artist: 'VibeCast Host',
-          audioUrl: data.audio_url,
-          thumbnail: require('../assets/thumbnail.png'),
-        });
-      } catch (error) {
-        console.error('Error calling API:', error);
-        setApiResponse(SAMPLE_RESPONSE);
-        setHasFetchedData(true);
-
-        setTrack({
-          title: 'Sample VibeCast Podcast',
-          artist: 'Chill Nerd & Anime Girl',
-          audioUrl: SAMPLE_RESPONSE.audio_url,
-          thumbnail: require('../assets/thumbnail.png'),
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPodcastData();
-  }, [setTrack, hasFetchedData, params]);
-
-  // Check for playback completion
-  useEffect(() => {
-    if (position >= duration && duration > 0 && !showMoodSelector) {
-      setShowMoodSelector(true);
-    }
-  }, [position, duration, showMoodSelector]);
-
-  const handleSliderChange = (value: number) => {
-    const newPosition = value * 1000;
-    setPosition(newPosition);
-  };
 
   const handleShare = async () => {
     try {
@@ -428,12 +519,9 @@ export default function Player() {
 
   if (!track) return null;
 
-  const positionInSeconds = Math.floor(position / 1000);
-  const durationInSeconds = Math.floor(duration / 1000);
-
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = time % 60;
+  const formatTime = (timeInSeconds: number) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = Math.floor(timeInSeconds % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
@@ -441,7 +529,6 @@ export default function Player() {
 
   return (
     <View style={styles.container}>
-      {/* Title Bar */}
       <SafeAreaView edges={['top']} style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -452,107 +539,86 @@ export default function Player() {
         <Text style={styles.headerTitle}>VibeCast</Text>
       </SafeAreaView>
 
-      {loading ? (
-        <View style={styles.loaderContainer}>
-          <ActivityIndicator size="large" color="#7C3AED" />
-          <Text style={styles.loaderText}>Generating your podcast...</Text>
+      <View style={styles.avatarSection}>
+        <View style={styles.avatarGlow}>
+          <Image source={require('../assets/avatar-base.png')} style={styles.avatar} />
         </View>
-      ) : (
-        <>
-          {/* Aura Card (Reduced Size, now side by side) */}
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarGlow}>
-              <Image source={require('../assets/avatar-base.png')} style={styles.avatar} />
-            </View>
-            <View style={styles.auraScoreCard}>
-              <Text style={styles.auraScore}>🌈 Aura: {auraScore}</Text>
-              <Text style={styles.auraStatus}>Laser Focused ⚡</Text>
-            </View>
+        <View style={styles.auraScoreCard}>
+          <Text style={styles.auraScore}>🌈 Aura: {auraScore}</Text>
+          <Text style={styles.auraStatus}>Laser Focused ⚡</Text>
+        </View>
+      </View>
+
+      <ScrollView style={styles.contentSection}>
+        <View style={styles.summaryContent}>
+          <Text style={styles.episodeTitle}>{track.title}</Text>
+          <Text style={styles.hosts}>Hosted by: {track.artist}</Text>
+        </View>
+
+        {apiResponse && (
+          <View style={styles.summaryContainer}>
+            <Text style={styles.sectionTitle}>Summary</Text>
+            <Text style={styles.summaryText}>{apiResponse.summary}</Text>
           </View>
+        )}
 
-          {/* Single Scrollable Section (Increased Size) */}
-          <ScrollView style={styles.contentSection}>
-            {/* Podcast Description */}
-            <View style={styles.summaryContent}>
-              <Text style={styles.episodeTitle}>{track.title}</Text>
-              <Text style={styles.hosts}>Hosted by: {track.artist}</Text>
-              <Text style={styles.summaryText}>
-                A podcast generated to help you study smarter and vibe harder! 🎧
-              </Text>
-            </View>
+        {apiResponse && (
+          <View style={styles.mindmapContainer}>
+            <Text style={styles.sectionTitle}>Mindmap</Text>
+            <MindmapComponent mindmap={apiResponse.mindmap} />
+          </View>
+        )}
 
-            {/* Summary from API */}
-            {apiResponse && (
-              <View style={styles.summaryContainer}>
-                <Text style={styles.sectionTitle}>Summary:</Text>
-                <Text style={styles.summaryText}>{apiResponse.summary}</Text>
-              </View>
-            )}
+        <View style={{ height: 100 }} />
+      </ScrollView>
 
-            {/* Key Points */}
-            {apiResponse && (
-              <View style={styles.keyPointsContainer}>
-                <Text style={styles.sectionTitle}>Key Points:</Text>
-                {apiResponse.mindmap.branches
-                  .flatMap((branch) => branch.subtopics)
-                  .map((point, index) => (
-                    <Text key={index} style={styles.keyPoint}>
-                      • {point}
-                    </Text>
-                  ))}
-              </View>
-            )}
-
-            {/* Transcript */}
-            {/* {apiResponse && (
-              <View style={styles.transcriptContainer}>
-                <Text style={styles.sectionTitle}>Transcript:</Text>
-                <Text style={styles.transcriptText}>
-                  Welcome to VibeCast! Here’s a transcript of your generated podcast...
-                </Text>
-              </View>
-            )} */}
-
-            {/* Mindmap */}
-            {apiResponse && (
-              <View style={styles.mindmapContainer}>
-                <Text style={styles.sectionTitle}>Mindmap:</Text>
-                <MindmapComponent mindmap={apiResponse.mindmap} />
-              </View>
-            )}
-          </ScrollView>
-
-          {/* Playback Controls (Reduced Size) */}
-          <View style={styles.playbackControls}>
+      <View style={styles.playbackControls}>
+        {isLoading ? (
+          <ActivityIndicator size="small" color="#7C3AED" />
+        ) : (
+          <>
             <Slider
               style={styles.slider}
               minimumValue={0}
-              maximumValue={durationInSeconds || 1}
-              value={positionInSeconds}
+              maximumValue={audioDuration / 1000 || 1}
+              value={currentPosition / 1000}
               onValueChange={handleSliderChange}
               minimumTrackTintColor="#7C3AED"
               maximumTrackTintColor="#555"
               thumbTintColor="#7C3AED"
-              step={1}
+              step={0.1}
+              disabled={!isAudioReady || isBuffering}
             />
             <View style={styles.timeContainer}>
-              <Text style={styles.timeText}>{formatTime(positionInSeconds)}</Text>
-              <Text style={styles.timeText}>{formatTime(durationInSeconds)}</Text>
+              <Text style={styles.timeText}>{formatTime(currentPosition / 1000)}</Text>
+              {isBuffering && <ActivityIndicator size="small" color="#7C3AED" style={styles.bufferingIndicator} />}
+              <Text style={styles.timeText}>{formatTime(audioDuration / 1000)}</Text>
             </View>
             <View style={styles.controlButtons}>
-              <TouchableOpacity onPress={() => handleSliderChange(Math.max(positionInSeconds - 10, 0))}>
-                <Icon name="replay-10" size={30} color="#FFF" style={styles.controlIcon} />
+              <TouchableOpacity
+                onPress={() => handleSkip(-10)}
+                disabled={!isAudioReady || isBuffering}
+                style={[styles.controlIcon, (!isAudioReady || isBuffering) && styles.controlIconDisabled]}
+              >
+                <Icon name="replay-10" size={30} color={isAudioReady && !isBuffering ? "#FFF" : "#666"} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={togglePlayback}>
+              <TouchableOpacity
+                onPress={handlePlayPause}
+                disabled={!isAudioReady || isBuffering}
+                style={[styles.controlIcon, (!isAudioReady || isBuffering) && styles.controlIconDisabled]}
+              >
                 <Icon
                   name={isPlaying ? 'pause' : 'play-arrow'}
                   size={40}
-                  color="#FFF"
-                  style={styles.controlIcon}
+                  color={isAudioReady && !isBuffering ? "#FFF" : "#666"}
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleSliderChange(Math.min(positionInSeconds + 10, durationInSeconds))}>
-                <Icon name="forward-10" size={30} color="#FFF" style={styles.controlIcon} />
+              <TouchableOpacity
+                onPress={() => handleSkip(10)}
+                disabled={!isAudioReady || isBuffering}
+                style={[styles.controlIcon, (!isAudioReady || isBuffering) && styles.controlIconDisabled]}
+              >
+                <Icon name="forward-10" size={30} color={isAudioReady && !isBuffering ? "#FFF" : "#666"} />
               </TouchableOpacity>
             </View>
             <View style={styles.bottomActions}>
@@ -566,40 +632,27 @@ export default function Player() {
                 <Icon name="more-horiz" size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
+          </>
+        )}
+      </View>
+
+      <View style={{ height: 50, backgroundColor: '#1F1F1F' }} />
+
+      {showMoodSelector && (
+        <View style={styles.moodSelector}>
+          <Text style={styles.moodSelectorTitle}>How did this episode make you feel?</Text>
+          <View style={styles.moodOptions}>
+            {['😌', '🧠', '💥', '😭', '😴'].map((emoji) => (
+              <TouchableOpacity
+                key={emoji}
+                style={styles.moodOption}
+                onPress={() => handleMoodReaction(emoji)}
+              >
+                <Text style={styles.moodEmoji}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-
-          {/* Bottom spacer to add space below playback controls for easier access to the share button */}
-          <View style={{
-            height: 50,
-            backgroundColor: '#1F1F1F',
-          }} />
-
-          {/* Mood Reaction Selector */}
-          {showMoodSelector && (
-            <View style={styles.moodSelector}>
-              <Text style={styles.moodSelectorTitle}>How did this episode make you feel?</Text>
-              <View style={styles.moodOptions}>
-                {['😌', '🧠', '💥', '😭', '😴'].map((emoji) => (
-                  <TouchableOpacity
-                    key={emoji}
-                    style={styles.moodOption}
-                    onPress={() => handleMoodReaction(emoji)}
-                  >
-                    <Text style={styles.moodEmoji}>{emoji}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Shareable Content */}
-          <View ref={shareRef} style={styles.shareContainer} collapsable={false}>
-            <Text style={styles.shareEpisodeTitle}>{track.title}</Text>
-            <Text style={styles.shareHosts}>Hosted by: {track.artist}</Text>
-            <Text style={styles.shareAuraScore}>Aura Score: {auraScore}</Text>
-            <Text style={styles.shareQuote}>{hostQuote}</Text>
-          </View>
-        </>
+        </View>
       )}
     </View>
   );
@@ -627,20 +680,10 @@ const styles = StyleSheet.create({
     left: 15,
     zIndex: 1,
   },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loaderText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#FFF',
-  },
   avatarSection: {
-    flexDirection: 'row', // Changed to row for side-by-side layout
-    alignItems: 'center', // Align items vertically in the row
-    justifyContent: 'center', // Center the items horizontally
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 10,
     marginBottom: 10,
   },
@@ -649,7 +692,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 4,
-    marginRight: 10, // Add spacing between avatar and aura card
+    marginRight: 10,
   },
   avatar: {
     width: 80,
@@ -694,11 +737,11 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#7C3AED',
-    marginBottom: 15,
+    borderColor: '#7C3AED'
+    // Stuarts Crossing, VA 24175,
   },
   episodeTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#FFF',
     marginBottom: 5,
@@ -708,56 +751,30 @@ const styles = StyleSheet.create({
     color: '#BBB',
     marginBottom: 8,
   },
-  summaryText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFF',
-  },
-  keyPointsContainer: {
-    backgroundColor: '#2A2A2A',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#7C3AED',
-    marginBottom: 15,
-  },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#7C3AED',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  keyPoint: {
-    fontSize: 12,
+  summaryText: {
+    fontSize: 14,
+    lineHeight: 20,
     color: '#FFF',
-    marginVertical: 2,
-  },
-  transcriptContainer: {
-    backgroundColor: '#2A2A2A',
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#7C3AED',
-    marginBottom: 15,
-  },
-  transcriptText: {
-    fontSize: 12,
-    color: '#FFF',
-    lineHeight: 18,
   },
   mindmapContainer: {
-    alignItems: 'center',
     backgroundColor: '#2A2A2A',
     padding: 15,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#7C3AED',
     marginBottom: 15,
+    alignItems: 'center',
   },
   mindmapClipContainer: {
     width: '100%',
-    height: 400, // Fixed height to match typical mindmapContainer rendering
-    overflow: 'hidden', // Clip content that exceeds the container
+    height: 400,
+    overflow: 'hidden',
   },
   mindmapContainerInner: {
     alignItems: 'center',
@@ -799,6 +816,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#7C3AED',
   },
+  controlIconDisabled: {
+    opacity: 0.5,
+  },
   bottomActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -832,62 +852,7 @@ const styles = StyleSheet.create({
   moodEmoji: {
     fontSize: 20,
   },
-  bottomNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  navIcon: {
-    fontSize: 20,
-    color: '#6B7280',
-  },
-  navIconActive: {
-    color: '#7C3AED',
-  },
-  shareContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#2A2A2A',
-    padding: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-    opacity: 0,
-  },
-  shareEpisodeTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 5,
-  },
-  shareHosts: {
-    fontSize: 16,
-    color: '#BBB',
-    marginBottom: 5,
-  },
-  shareAuraScore: {
-    fontSize: 14,
-    color: '#7C3AED',
-    marginBottom: 5,
-  },
-  shareQuote: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    color: '#FFF',
-    textAlign: 'center',
+  bufferingIndicator: {
+    marginHorizontal: 10,
   },
 });
